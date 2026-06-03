@@ -3,8 +3,8 @@ const ErrorHandler= require("../utils/errorHandler");
 const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const APIFeatures = require("../utils/apiFeatures");
 //Fetch restaurants based on search and sort
-exports.getAllRestaurants = catchAsyncErrors(async(req,res,next)=>{
-    const apiFeatures(Restaurant.find(),req.query)
+exports.getAllRestaurants = catchAsyncErrors(async(req,res,next) =>{
+    const apiFeatures = new APIFeatures(Restaurant.find(),req.query)
     .search()
     .sort();
 
