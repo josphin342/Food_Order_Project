@@ -7,10 +7,37 @@ const ErrorHandler = require("../utils/errorHandler");
 const Email = require("../utils/email");
 const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const sendToken = require("../utils/sendToken");
+const cloudinary = require("../config/cloudinary");
+
 
 // Register user
 exports.signup = catchAsyncErrors(async (req, res, next) => {
+
   const { name, email, password, passwordConfirm, phoneNumber } = req.body;
+
+  let avatar = {};
+
+  // If avatar not provided OR default avatar
+  if (!req.body.avatar || req.body.avatar === "/images/images.png") {
+
+    avatar = {
+      public_id: "default",
+      url: "/images/images.png",
+    };
+
+  } else {
+
+    const result = await cloudinary.uploader.upload(req.body.avatar, {
+      folder: "avatars",
+      width: 150,
+      crop: "scale",
+    });
+
+    avatar = {
+      public_id: result.public_id,
+      url: result.secure_url,
+    };
+  }
 
   const user = await User.create({
     name,
@@ -18,14 +45,17 @@ exports.signup = catchAsyncErrors(async (req, res, next) => {
     password,
     passwordConfirm,
     phoneNumber,
-    
+    avatar,
   });
 
   sendToken(user, 200, res);
+
 });
+
 
 // Login
 exports.login = catchAsyncErrors(async (req, res, next) => {
+
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -45,10 +75,13 @@ exports.login = catchAsyncErrors(async (req, res, next) => {
   }
 
   sendToken(user, 200, res);
+
 });
+
 
 // Protect Route
 exports.protect = catchAsyncErrors(async (req, res, next) => {
+
   let token;
 
   if (
@@ -56,7 +89,8 @@ exports.protect = catchAsyncErrors(async (req, res, next) => {
     req.headers.authorization.startsWith("Bearer")
   ) {
     token = req.headers.authorization.split(" ")[1];
-  } else if (req.cookies.jwt) {
+  } 
+  else if (req.cookies.jwt) {
     token = req.cookies.jwt;
   }
 
@@ -64,8 +98,8 @@ exports.protect = catchAsyncErrors(async (req, res, next) => {
     return next(
       new ErrorHandler(
         "You are not logged in! Please log in to get access.",
-        401,
-      ),
+        401
+      )
     );
   }
 
@@ -73,18 +107,22 @@ exports.protect = catchAsyncErrors(async (req, res, next) => {
 
   const currentUser = await User.findById(decoded.id);
 
-  if (!currentUser) {
-    return next(
-      new ErrorHandler("User no longer exists. Please login again.", 401),
-    );
-  }
+if (!currentUser) {
+  return next(
+    new ErrorHandler(
+      "User no longer exists. Please login again.",
+      401
+    )
+  );
+}
 
   if (currentUser.changedPasswordAfter(decoded.iat)) {
+
     return next(
       new ErrorHandler(
         "User recently changed password ! please log in again.",
-        404,
-      ),
+        404
+      )
     );
   }
 
@@ -93,18 +131,23 @@ exports.protect = catchAsyncErrors(async (req, res, next) => {
   next();
 });
 
+
 // Get profile
 exports.getUserProfile = catchAsyncErrors(async (req, res, next) => {
+
   const user = await User.findById(req.user.id);
 
   res.status(200).json({
     success: true,
     user,
   });
+
 });
+
 
 // Update Password
 exports.updatePassword = catchAsyncErrors(async (req, res, next) => {
+
   const { oldPassword, newPassword, newPasswordConfirm } = req.body;
 
   const user = await User.findById(req.user.id).select("+password");
@@ -124,10 +167,53 @@ exports.updatePassword = catchAsyncErrors(async (req, res, next) => {
     success: true,
     message: "Password updated successfully",
   });
+
 });
+
+
+// Update Profile
+exports.updateProfile = catchAsyncErrors(async (req, res, next) => {
+
+  const newUserData = {
+    name: req.body.name,
+    email: req.body.email,
+  };
+
+  if (req.body.avatar !== "") {
+
+    const user = await User.findById(req.user.id);
+
+    const image_id = user.avatar.public_id;
+
+    await cloudinary.uploader.destroy(image_id);
+
+    const result = await cloudinary.uploader.upload(req.body.avatar, {
+      folder: "avatars",
+      width: 150,
+      crop: "scale",
+    });
+
+    newUserData.avatar = {
+      public_id: result.public_id,
+      url: result.secure_url,
+    };
+  }
+
+  await User.findByIdAndUpdate(req.user.id, newUserData, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({
+    success: true,
+  });
+
+});
+
 
 // Forgot Password
 exports.forgotPassword = catchAsyncErrors(async (req, res, next) => {
+
   const user = await User.findOne({ email: req.body.email });
 
   if (!user) {
@@ -139,6 +225,7 @@ exports.forgotPassword = catchAsyncErrors(async (req, res, next) => {
   await user.save({ validateBeforeSave: false });
 
   try {
+
     const resetURL = `${process.env.FRONTEND_URL}/users/resetPassword/${resetToken}`;
 
     await new Email(user, resetURL).sendPasswordReset();
@@ -147,7 +234,9 @@ exports.forgotPassword = catchAsyncErrors(async (req, res, next) => {
       status: "success",
       message: "Token sent to email!",
     });
+
   } catch (err) {
+
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
 
@@ -156,22 +245,27 @@ exports.forgotPassword = catchAsyncErrors(async (req, res, next) => {
     return next(
       new ErrorHandler(
         "There was an error sending the email, try again later!",
-        500,
-      ),
+        500
+      )
     );
   }
+
 });
+
 
 // Reset Password
 exports.resetPassword = catchAsyncErrors(async (req, res, next) => {
+
   const hashedToken = crypto
     .createHash("sha256")
     .update(req.params.token)
     .digest("hex");
 
   const user = await User.findOne({
+
     passwordResetToken: hashedToken,
     passwordResetExpires: { $gt: Date.now() },
+
   });
 
   if (!user) {
@@ -187,10 +281,13 @@ exports.resetPassword = catchAsyncErrors(async (req, res, next) => {
   await user.save();
 
   sendToken(user, 200, res);
+
 });
+
 
 // Logout
 exports.logout = catchAsyncErrors(async (req, res, next) => {
+
   res.cookie("jwt", null, {
     expires: new Date(Date.now()),
     httpOnly: true,
@@ -200,4 +297,5 @@ exports.logout = catchAsyncErrors(async (req, res, next) => {
     success: true,
     message: "Logged out",
   });
+
 });

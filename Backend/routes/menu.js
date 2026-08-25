@@ -1,14 +1,25 @@
-const epress= require(`express`);
-const router=XPathExpression.Router({mergeParams:true});
+const express = require("express");
+const router = express.Router({ mergeParams: true });
 const {
-    getAllMenu,
-    createMenu,
-    deleteMenu,
-    addItemsToMenu}=require("../controllers/menuController");
+  getAllMenu,
+  createMenu,
+  deleteMenu,
+  addItemsToMenu,
+} = require("../controllers/menuController");
 
 const { protect } = require("../controllers/authController");
-const { authorizeRoles } = require("../middlewares/authorizeRoles");
-router.route("/").get(getAllmenu).post(protect, authorizeRoles("admin"), addItemsToMenu);
-router.route("/:menuId").delete(protect,authorizeRoles("admin"), deleteMenu);
-router.route(":menuId/Items").post(protect,authorizeRoles("admin"), addItemsToMenu);
-module.exports=router;
+const { authorizeRoles } = require("../middleware/authorizeRoles");
+
+router
+  .route("/")
+  .get(getAllMenu)
+  .post(protect, authorizeRoles("admin"), createMenu);
+
+// add food item to a specific menu (more specific, must come before /:menuId)
+router
+  .route("/:menuId/addItems")
+  .patch(protect, authorizeRoles("admin"), addItemsToMenu);
+
+router.route("/:menuId").delete(protect, authorizeRoles("admin"), deleteMenu);
+
+module.exports = router;

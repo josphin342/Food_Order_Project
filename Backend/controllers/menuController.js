@@ -17,14 +17,14 @@ exports.getAllMenu=catchAsync(async(req,res,next)=>{
      const menu=await Menu.find(filter).populate("menu.items")
      res.status(200).json({
         status:"success",
-        count=menu.length,
+        count:menu.length,
         data:menu
      })
 
 });
 //create menu
 exports.createMenu= catchAsync(async(req,res,next)=>{
-    const menu =await Menu.crate(req.body);
+    const menu =await Menu.create(req.body);
     res.status(201).json({
         status:"success",
         data:menu

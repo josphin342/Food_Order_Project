@@ -1,4 +1,5 @@
 const express = require("express");
+
 const router = express.Router({ mergeParams: true });
 
 const {
@@ -10,10 +11,16 @@ const {
 } = require("../controllers/foodItemController");
 
 const { protect } = require("../controllers/authController");
-const { authorizeRoles } = require("../middlewares/authorizeRoles");
-router.route("/item").post(protect, authorizeRoles("admin"), createFoodItem);
+const { authorizeRoles } = require("../middleware/authorizeRoles");
+
+router
+  .route("/item")
+  .post(protect, authorizeRoles("admin"), createFoodItem);
+
+router.route("/items").get(getAllFoodItems);
 
 router.route("/items/:storeId").get(getAllFoodItems);
+
 router
   .route("/item/:foodId")
   .get(getFoodItem)

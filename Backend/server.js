@@ -1,39 +1,37 @@
-//to start the server
+//start the server
 
-//this file is going to load environment variables
+//load env variables
+//start server
 
-// import app first
-/*const app=require("./app")
-const ConnectDatabase=require("./db")
-
-//import dotenv to load environment variables from .env file
-const dotenv=require("dotenv");
-
-//configure dotenv to load variables from .env file
-dotenv.config({path:"./config/config.env"})
-
-//connet databse
-ConnectDatabase();
-
-//now start the server
-const server=app.listen(process.env.PORT,()=>{
-    console.log(`Server is running on port ${process.env.PORT}`);
-})*/
-
+//Import app
 const app = require("./app")
-
 const connectDatabase = require("./db")
 
-//import dotenv 
+//import dotenv
 const dotenv = require("dotenv");
+
+// Handle Uncaught exceptions
+process.on("uncaughtException", (err) => {
+  console.log(`ERROR: ${err.stack}`);
+  console.log("Shutting down server due to uncaught exception");
+  process.exit(1);
+});
+
+//Load config
 dotenv.config({ path: "./config/config.env" })
 
-//connect database
+//connect to database
 connectDatabase();
 
-//start the server 
+//start the server
 
 const server = app.listen(process.env.PORT,() =>{
-
-        console.log(`Server is running at port ${process.env.PORT}`);
+    console.log(`Server is running on port ${process.env.PORT}`);
 })
+
+// Handle Unhandled Promise rejections
+process.on("unhandledRejection", (err) => {
+  console.log(`ERROR: ${err.message}`);
+  console.log("Shutting down server due to Unhandled Promise rejection");
+  server.close(() => process.exit(1));
+});
