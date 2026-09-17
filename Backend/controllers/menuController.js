@@ -44,13 +44,19 @@ exports.deleteMenu=catchAsync(async(req,res,next)=>{
 });
 //add items into menu
 exports.addItemsToMenu=catchAsync(async(req,res,next)=> {
-    const {category,foodItemIditems}=req.body;
+    const { category, foodItemId } = req.body;
+    const { menuId } = req.params;
+
+    if (!foodItemId) {
+        return next(new ErrorHandler("Please provide foodItemId", 400));
+    }
+
     if(!menuId){
         return next(new ErrorHandler("Please provide menuId",400))
     }
     const menu =await Menu.findById(menuId);
     if(!menu){
-        return next(new ErrorHandle("No menu found with that Id",404))
+        return next(new ErrorHandler("No menu found with that Id",404))
     }
 //find categories
 let cat=menu.menu.find((c) => c.category === category);

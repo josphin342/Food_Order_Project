@@ -5,11 +5,18 @@ const fileUpload = require("express-fileupload");
 const cors = require("cors");
 
 const errorMiddleware = require("./middleware/error");
+const ErrorHandler = require("./utils/errorHandler");
 
 // Middlewares
-app.use(cors());
-app.use(express.json({ limit: "30kb" }));
-app.use(express.urlencoded({ extended: true, limit: "30kb" }));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 app.use(fileUpload());
 
@@ -27,14 +34,13 @@ app.use("/api/v1/eats/menus", menuRouter);
 app.use("/api/v1/eats/stores", restaurant);
 app.use("/api/v1/eats/orders", order);
 app.use("/api/v1/users", auth);
-app.use("/api/v1", payment);
+app.use("/api/v1/eats", payment);
 app.use("/api/v1/eats/cart", cart);
 
 // 404 handler
 app.all("/{*splat}", (req, res, next) => {
-    next(new ErrorHandler(`Route ${req.originalUrl} not found`, 404));
+  next(new ErrorHandler(`Route ${req.originalUrl} not found`, 404));
 });
-
 
 // Error middleware
 app.use(errorMiddleware);

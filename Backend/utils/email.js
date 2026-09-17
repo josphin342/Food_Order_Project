@@ -35,15 +35,16 @@ module.exports = class Email {
     // but here we configure a custom SMTP server
 
     return nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
+    host: process.env.EMAIL_HOST,
+    port: Number(process.env.EMAIL_PORT),
+    secure: Number(process.env.EMAIL_PORT) === 465,
 
-      auth: {
-        user: process.env.EMAIL_USERNAME,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
-  }
+    auth: {
+      user: process.env.EMAIL_USERNAME,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+}
 
   // Main function used to send emails
   // It receives template name and email subject

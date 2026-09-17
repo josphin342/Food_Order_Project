@@ -10,10 +10,8 @@ module.exports = (err, req, res, next) => {
   // we assign 500 which means Internal Server Error
   err.statusCode = err.statusCode || 500;
 
-  // DEVELOPMENT MODE
-  // In development we show detailed error information
-  // so developers can easily debug the issue
-  if (process.env.NODE_ENV === "DEVELOPMENT") {
+  // In development we show detailed error information so developers can debug.
+  if (process.env.NODE_ENV?.toLowerCase() === "development") {
 
     res.status(err.statusCode).json({
       success: false,
@@ -29,10 +27,8 @@ module.exports = (err, req, res, next) => {
     });
   }
 
-  // PRODUCTION MODE
-  // In production we should not expose internal error details
-  // for security reasons. So we send only necessary information.
-  if (process.env.NODE_ENV === "PRODUCTION") {
+  // In production (and when NODE_ENV is omitted), do not expose internals.
+  else {
 
     // Create a copy of the error object
     let error = { ...err };
@@ -42,7 +38,7 @@ module.exports = (err, req, res, next) => {
 
     // Handling Mongoose Invalid ObjectId Error
     // Example: if someone sends a wrong product id in URL
-    if (err.name == "castError") {
+    if (err.name === "CastError") {
       const message = `Resource not found. Invalid: ${err.path}`;
       error = new ErrorHandler(message, 400);
     }

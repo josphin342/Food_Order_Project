@@ -46,6 +46,7 @@ exports.signup = catchAsyncErrors(async (req, res, next) => {
     passwordConfirm,
     phoneNumber,
     avatar,
+    role: "user",
   });
 
   sendToken(user, 200, res);
@@ -90,7 +91,7 @@ exports.protect = catchAsyncErrors(async (req, res, next) => {
   ) {
     token = req.headers.authorization.split(" ")[1];
   } 
-  else if (req.cookies.jwt) {
+  else if (req.cookies?.jwt) {
     token = req.cookies.jwt;
   }
 
@@ -158,10 +159,11 @@ exports.updatePassword = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Old password is incorrect", 400));
   }
 
-  user.password = newPassword;
-  user.passwordConfirm = newPasswordConfirm;
+user.password = newPassword;
+user.passwordConfirm = newPasswordConfirm;
+user.passwordChangedAt = Date.now() - 1000;
 
-  await user.save();
+await user.save();
 
   res.status(200).json({
     success: true,
@@ -169,6 +171,7 @@ exports.updatePassword = catchAsyncErrors(async (req, res, next) => {
   });
 
 });
+
 
 
 // Update Profile
@@ -185,7 +188,9 @@ exports.updateProfile = catchAsyncErrors(async (req, res, next) => {
 
     const image_id = user.avatar.public_id;
 
-    await cloudinary.uploader.destroy(image_id);
+    if (image_id && image_id !== "default") {
+      await cloudinary.uploader.destroy(image_id);
+    }
 
     const result = await cloudinary.uploader.upload(req.body.avatar, {
       folder: "avatars",
@@ -272,13 +277,14 @@ exports.resetPassword = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Token is invalid or has expired", 400));
   }
 
-  user.password = req.body.password;
-  user.passwordConfirm = req.body.passwordConfirm;
+ user.password = req.body.password;
+user.passwordConfirm = req.body.passwordConfirm;
+user.passwordChangedAt = Date.now() - 1000;
 
-  user.passwordResetToken = undefined;
-  user.passwordResetExpires = undefined;
+user.passwordResetToken = undefined;
+user.passwordResetExpires = undefined;
 
-  await user.save();
+await user.save();
 
   sendToken(user, 200, res);
 

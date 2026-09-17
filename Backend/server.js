@@ -3,10 +3,6 @@
 //load env variables
 //start server
 
-//Import app
-const app = require("./app")
-const connectDatabase = require("./db")
-
 //import dotenv
 const dotenv = require("dotenv");
 
@@ -18,7 +14,12 @@ process.on("uncaughtException", (err) => {
 });
 
 //Load config
-dotenv.config({ path: "./config/config.env" })
+dotenv.config({ path: "./config/config.env" });
+
+// Import modules only after environment variables are available. Some route
+// controllers configure external clients (for example Stripe) during loading.
+const app = require("./app");
+const connectDatabase = require("./db");
 
 //connect to database
 connectDatabase();

@@ -65,6 +65,11 @@ const orderSchema = mongoose.Schema({
       type: String,
     },
   },
+  stripeSessionId: {
+  type: String,
+  required: true,
+  unique: true,
+},
   paidAt: {
     type: Date,
   },
@@ -88,10 +93,18 @@ const orderSchema = mongoose.Schema({
     default: 0.0,
   },
   orderStatus: {
-    type: String,
-    required: true,
-    default: "Processing",
-  },
+  type: String,
+  enum: [
+    "Processing",
+    "Confirmed",
+    "Preparing",
+    "Out for delivery",
+    "Delivered",
+    "Cancelled",
+  ],
+  required: true,
+  default: "Processing",
+},
   deliveredAt: {
     type: Date,
   },
@@ -114,29 +127,26 @@ const orderSchema = mongoose.Schema({
 //if stock is available => reduce the stock of each foodItem
 //if stock is not available => return response to user => "stock not available"
 
-orderSchema.pre("save", async function (next) {
-  try {
-    for (const orderItem of this.orderItems) {
-      const foodItem = await mongoose
-        .model("FoodItem")
-        .findById(orderItem.fooditem);
-      if (!foodItem) {
-        throw new Error("Food item not found.");
-      }
+orderSchema.pre("save", async function () {
+  for (const orderItem of this.orderItems) {
+    const foodItem = await mongoose
+      .model("FoodItem")
+      .findById(orderItem.fooditem);
 
-      if (foodItem.stock < orderItem.quantity) {
-        throw new Error(
-          `Insufficient stock for '${orderItem.name}' in this order.`
-        );
-      }
-
-      foodItem.stock -= orderItem.quantity;
-      await foodItem.save();
+    if (!foodItem) {
+      throw new Error("Food item not found.");
     }
 
-    next();
-  } catch (error) {
-    next(error);
+    if (foodItem.stock < orderItem.quantity) {
+      throw new Error(
+        `Insufficient stock for '${orderItem.name}' in this order.`
+      );
+    }
+
+    foodItem.stock -= orderItem.quantity;
+
+    await foodItem.save();
   }
+
 });
 module.exports = mongoose.model("Order", orderSchema);

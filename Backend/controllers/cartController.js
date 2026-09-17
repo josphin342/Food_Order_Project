@@ -3,12 +3,16 @@ const FoodItem = require("../models/foodItem");
 const Restaurant = require("../models/restaurant");
 
 async function addItemToCart(req, res) {
-  const { userId, foodItemId, restaurantId, quantity } = req.body;
+  const { foodItemId, restaurantId, quantity } = req.body;
+  const userId = req.user._id;
 
   try {
     const foodItem = await FoodItem.findById(foodItemId);
     if (!foodItem) {
       return res.status(404).json({ message: "Food item not found" });
+    }
+    if (quantity < 1 || quantity > foodItem.stock) {
+      return res.status(400).json({ message: `Only ${foodItem.stock} ${foodItem.name} available.` });
     }
 
     const restaurant = await Restaurant.findById(restaurantId);
@@ -31,6 +35,9 @@ async function addItemToCart(req, res) {
           (item) => item.foodItem.toString() === foodItemId
         );
         if (itemIndex > -1) {
+          if (cart.items[itemIndex].quantity + quantity > foodItem.stock) {
+            return res.status(400).json({ message: `Only ${foodItem.stock} ${foodItem.name} available.` });
+          }
           cart.items[itemIndex].quantity += quantity;
         } else {
           cart.items.push({ foodItem: foodItemId, quantity });
@@ -50,7 +57,7 @@ async function addItemToCart(req, res) {
     const updatedCart = await Cart.findOne({ user: userId })
       .populate({
         path: "items.foodItem",
-        select: "name price images",
+        select: "name price images stock",
       })
       .populate({
         path: "restaurant",
@@ -66,7 +73,8 @@ async function addItemToCart(req, res) {
 // Update Cart
 
 async function updateCartItemQuantity(req, res) {
-  const { userId, foodItemId, quantity } = req.body;
+  const { foodItemId, quantity } = req.body;
+  const userId = req.user._id;
 
   try {
     let cart = await Cart.findOne({ user: userId });
@@ -81,6 +89,14 @@ async function updateCartItemQuantity(req, res) {
       return res.status(404).json({ message: "Food item not found in cart" });
     }
 
+    const foodItem = await FoodItem.findById(foodItemId);
+    if (!foodItem) {
+      return res.status(404).json({ message: "Food item not found" });
+    }
+    if (quantity < 1 || quantity > foodItem.stock) {
+      return res.status(400).json({ message: `Only ${foodItem.stock} ${foodItem.name} available.` });
+    }
+
     cart.items[itemIndex].quantity = quantity;
     await cart.save();
 
@@ -88,7 +104,7 @@ async function updateCartItemQuantity(req, res) {
     const updatedCart = await Cart.findOne({ user: userId })
       .populate({
         path: "items.foodItem",
-        select: "name price images",
+        select: "name price images stock",
       })
       .populate({
         path: "restaurant",
@@ -106,7 +122,8 @@ async function updateCartItemQuantity(req, res) {
 //Delete cart
 
 async function deleteCartItem(req, res) {
-  const { userId, foodItemId } = req.body;
+ const { foodItemId, quantity } = req.body;
+  const userId = req.user._id;
 
   try {
     let cart = await Cart.findOne({ user: userId });
@@ -133,7 +150,7 @@ async function deleteCartItem(req, res) {
       const updatedCart = await Cart.findOne({ user: userId })
         .populate({
           path: "items.foodItem",
-          select: "name price images",
+          select: "name price images stock",
         })
         .populate({
           path: "restaurant",
@@ -150,12 +167,12 @@ async function deleteCartItem(req, res) {
 //Fetch cart Item
 
 async function getCartItem(req, res) {
-  const userId = req.user;
+  const userId = req.user._id;
   try {
     const cart = await Cart.findOne({ user: userId })
       .populate({
         path: "items.foodItem",
-        select: "name price images",
+        select: "name price images stock",
       })
       .populate({
         path: "restaurant",

@@ -15,10 +15,33 @@ exports.newOrder = catchAsyncErrors(async (req, res, next) => {
   // console.log("id", req.body);
   const { session_id } = req.body;
 
+  if (!session_id) {
+  return next(
+    new ErrorHandler("Stripe session ID is required.", 400)
+  );
+}
+
   const session = await stripe.checkout.sessions.retrieve(session_id, {
     expand: ["customer"],
   });
-  console.log(session);
+
+  if (session.payment_status !== "paid") {
+  return next(
+    new ErrorHandler("Payment has not been completed.", 400)
+  );
+}
+
+const existingOrder = await Order.findOne({
+  stripeSessionId: session.id,
+});
+
+if (existingOrder) {
+  return res.status(200).json({
+    success: true,
+    order: existingOrder,
+    alreadyCreated: true,
+  });
+}
   const cart = await Cart.findOne({ user: req.user._id })
     .populate({
       path: "items.foodItem",
@@ -28,18 +51,46 @@ exports.newOrder = catchAsyncErrors(async (req, res, next) => {
       path: "restaurant",
       select: "name",
     });
-  console.log(cart);
+    if (!cart || !cart.items.length) {
+  return next(
+    new ErrorHandler(
+      "Cart is empty or order has already been created.",
+      400
+    )
+  );
+}
 
-  let deliveryInfo = {
-    address:
-      session.shipping_details.address.line1 +
-      " " +
-      session.shipping_details.address.line1,
-    city: session.shipping_details.address.city,
-    phoneNo: session.customer_details.phone,
-    postalCode: session.shipping_details.address.postal_code,
-    country: session.shipping_details.address.country,
-  };
+ const address =
+  session.shipping_details?.address ||
+  session.customer_details?.address;
+
+if (!address) {
+  return next(
+    new ErrorHandler(
+      "Delivery address was not provided by Stripe.",
+      400
+    )
+  );
+}
+
+let deliveryInfo = {
+  address: [
+    address.line1,
+    address.line2,
+  ]
+    .filter(Boolean)
+    .join(" "),
+
+  city: address.city,
+
+  phoneNo:
+    session.customer_details?.phone || "Not provided",
+
+  postalCode: address.postal_code,
+
+  country: address.country,
+};
+
   let orderItems = cart.items.map((item) => ({
     name: item.foodItem.name,
     quantity: item.quantity,
@@ -54,17 +105,19 @@ exports.newOrder = catchAsyncErrors(async (req, res, next) => {
   };
 
   const order = await Order.create({
-    orderItems,
-    deliveryInfo,
-    paymentInfo,
-    deliveryCharge: +session.shipping_cost.amount_subtotal / 100,
-    itemsPrice: +session.amount_subtotal / 100,
-    finalTotal: +session.amount_total / 100,
-    user: req.user.id,
-    restaurant: cart.restaurant._id,
-    paidAt: Date.now(),
-  });
-  console.log(order);
+  orderItems,
+  deliveryInfo,
+  paymentInfo,
+
+  stripeSessionId: session.id,
+
+  deliveryCharge: +session.shipping_cost.amount_subtotal / 100,
+  itemsPrice: +session.amount_subtotal / 100,
+  finalTotal: +session.amount_total / 100,
+  user: req.user.id,
+  restaurant: cart.restaurant._id,
+  paidAt: Date.now(),
+});
 
   await Cart.findOneAndDelete({ user: req.user._id });
 
@@ -83,6 +136,17 @@ exports.getSingleOrder = catchAsyncErrors(async (req, res, next) => {
 
   if (!order) {
     return next(new ErrorHandler("No Order found with this ID", 404));
+  }
+
+  // Customers can only view their own orders.
+  // Admins can view any order.
+  if (
+    order.user._id.toString() !== req.user._id.toString() &&
+    req.user.role !== "admin"
+  ) {
+    return next(
+      new ErrorHandler("You are not authorized to view this order", 403)
+    );
   }
 
   res.status(200).json({
@@ -107,9 +171,33 @@ exports.myOrders = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
+exports.updateOrderStatus = catchAsyncErrors(async (req, res, next) => {
+  const order = await Order.findById(req.params.id);
+
+  if (!order) {
+    return next(new ErrorHandler("No order found with this ID", 404));
+  }
+
+  order.orderStatus = req.body.orderStatus;
+
+  if (req.body.orderStatus === "Delivered") {
+    order.deliveredAt = Date.now();
+  }
+
+  await order.save();
+
+  res.status(200).json({
+    success: true,
+    order,
+  });
+});
+
 // Get all orders - ADMIN  =>   /api/v1/admin/orders/
 exports.allOrders = catchAsyncErrors(async (req, res, next) => {
-  const orders = await Order.find();
+  const orders = await Order.find()
+    .populate("user", "name email")
+    .populate("restaurant", "name")
+    .sort({ createdAt: -1 });
 
   let totalAmount = 0;
 

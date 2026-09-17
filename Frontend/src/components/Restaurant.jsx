@@ -1,0 +1,43 @@
+import { Link } from "react-router-dom";
+
+const Restaurant = ({ restaurant }) => {
+  return (
+    <div className="col-sm-12 col-md-6 col-lg-3 my-3">
+      <div className="card p-3 rounded">
+        <Link
+          to={`/eats/stores/${restaurant._id}`}
+          className="btn btn-block"
+        >
+          <img
+            className="card-img-top mx-auto"
+            src={restaurant.images[0].url}
+            alt={restaurant.name}
+          />
+        </Link>
+
+        <div className="card-body d-flex flex-column">
+          <h5 className="card-title">{restaurant.name}</h5>
+          <p className="rest_address">{restaurant.address}</p>
+          <span className={`badge align-self-start mb-2 ${restaurant.isVeg ? "bg-success" : "bg-secondary"}`}>{restaurant.isVeg ? "Pure Veg" : "Veg & Non-veg"}</span>
+
+          <div className="ratings mt-auto">
+            <div className="rating-outer">
+              <div
+                className="rating-inner"
+                style={{ width: `${(restaurant.ratings / 5) * 100}%` }}
+              ></div>
+            </div>
+
+            <span id="no_of_reviews">
+              ({restaurant.numOfReviews} Reviews)
+            </span>
+          </div>
+
+          <Link to={`/eats/stores/${restaurant._id}`} className="btn btn-outline-success mt-3">Restaurant details</Link>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Restaurant;

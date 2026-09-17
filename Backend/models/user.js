@@ -96,12 +96,12 @@
  
  // CREATE JWT TOKEN
  userSchema.methods.getJWTToken = function () {
-   return jwt.sign(
-     { id: this._id },
-     process.env.JWT_SECRET,
-     { expiresIn: process.env.JWT_EXPIRE }
-   );
- };
+  return jwt.sign(
+    { id: this._id },
+    process.env.JWT_SECRET,
+    { expiresIn: `${process.env.JWT_EXPIRES_TIME}d` }
+  );
+};
  
  // PASSWORD RESET TOKEN
  userSchema.methods.createPasswordResetToken = function () {
