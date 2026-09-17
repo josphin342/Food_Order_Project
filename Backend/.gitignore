@@ -1,6 +1,5 @@
 node_modules/
 config/config.env
-config/cloudinary.js
 .env
 *.log
 .DS_Store
