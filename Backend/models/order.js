@@ -128,6 +128,8 @@ const orderSchema = mongoose.Schema({
 //if stock is not available => return response to user => "stock not available"
 
 orderSchema.pre("save", async function () {
+  if (!this.isNew) return;
+
   for (const orderItem of this.orderItems) {
     const foodItem = await mongoose
       .model("FoodItem")

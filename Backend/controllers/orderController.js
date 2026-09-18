@@ -170,28 +170,34 @@ exports.myOrders = catchAsyncErrors(async (req, res, next) => {
     orders,
   });
 });
-
+//update order status   =>   /api/v1/admin/order/:id
 exports.updateOrderStatus = catchAsyncErrors(async (req, res, next) => {
-  const order = await Order.findById(req.params.id);
+  const updateData = {
+    orderStatus: req.body.orderStatus,
+  };
+
+  if (req.body.orderStatus === "Delivered") {
+    updateData.deliveredAt = Date.now();
+  }
+
+  const order = await Order.findByIdAndUpdate(
+    req.params.id,
+    updateData,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
 
   if (!order) {
     return next(new ErrorHandler("No order found with this ID", 404));
   }
-
-  order.orderStatus = req.body.orderStatus;
-
-  if (req.body.orderStatus === "Delivered") {
-    order.deliveredAt = Date.now();
-  }
-
-  await order.save();
 
   res.status(200).json({
     success: true,
     order,
   });
 });
-
 // Get all orders - ADMIN  =>   /api/v1/admin/orders/
 exports.allOrders = catchAsyncErrors(async (req, res, next) => {
   const orders = await Order.find()
