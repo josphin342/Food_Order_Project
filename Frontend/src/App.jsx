@@ -9,6 +9,8 @@ import { loadUser } from "./redux/actions/userAction";
 import store from "./redux/store";
 import Login from "./components/user/Login";
 import Register from "./components/user/Register";
+import ForgotPassword from "./components/user/ForgotPassword";
+import ResetPassword from "./components/user/ResetPassword";
 import Profile from  "./components/user/Profile";
 import UpdateProfile from "./components/user/UpdateProfile";
 import MyOrders from "./components/MyOrders";
@@ -42,6 +44,8 @@ function App() {
               {/*user*/}
               <Route path="/users/login" element={<Login />}/>
               <Route path="/users/signup" element={<Register />}/>
+              <Route path="/users/forgetPassword" element={<ForgotPassword />} />
+              <Route path="/users/resetPassword/:token"element={<ResetPassword />}/>
               <Route path="/users/me" element={<ProtectedRoute><Profile /></ProtectedRoute>}/>
               
               <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
