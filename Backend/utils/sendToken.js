@@ -1,6 +1,3 @@
-const jwt = require("jsonwebtoken");
-
-// Function to create JWT token and send it to the client
 const sendToken = (user, statusCode, res) => {
   const token = user.getJWTToken();
 
@@ -11,6 +8,7 @@ const sendToken = (user, statusCode, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/",
   };
 
   res.cookie("jwt", token, cookieOptions);
